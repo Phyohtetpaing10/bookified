@@ -18,9 +18,14 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import LoadingOverlay from "./LoadingOverlay";
 
+const MAX_PDF_SIZE = 50 * 1024 * 1024;
+
 const formSchema = z.object({
-  pdf: z.any().refine((file) => file, "PDF file is required"),
-  cover: z.any().optional(),
+  pdf: z
+    .file()
+    .mime(["application/pdf"], "Only PDF files are allowed")
+    .max(MAX_PDF_SIZE, "PDF file must be 50MB or smaller"),
+  cover: z.instanceof(File).optional(),
   title: z.string().min(1, "Title is required"),
   author: z.string().min(1, "Author is required"),
   voice: z.string().min(1, "Please select a voice"),
