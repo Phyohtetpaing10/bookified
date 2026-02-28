@@ -1,9 +1,11 @@
-const page = () => {
+import HeroSection from "@/components/HeroSection";
+
+const Page = () => {
   return (
-    <div>
-      <h1 className="text-2xl underline"></h1>
-    </div>
+    <main className="wrapper container">
+      <HeroSection />
+    </main>
   );
 };
 
-export default page;
+export default Page;
