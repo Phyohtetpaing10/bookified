@@ -60,8 +60,6 @@ const UploadForm = () => {
 
     setIsSubmitting(true);
 
-    // PostHog -> Track Book Uploads...
-
     try {
       const existsCheck = await checkBookExists(data.title);
 
