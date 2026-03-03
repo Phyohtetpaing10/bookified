@@ -10,7 +10,13 @@ export const getAllBooks = async () => {
   try {
     await connectDB();
 
-    const books = await Book.find().sort({ createdAt: -1 }).lean();
+    const books = await Book.find(
+      {},
+      { title: 1, author: 1, coverURL: 1, slug: 1, createdAt: 1 },
+    )
+      .sort({ createdAt: -1 })
+      .limit(24)
+      .lean();
 
     return {
       success: true,
