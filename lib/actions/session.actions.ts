@@ -3,6 +3,12 @@
 import { EndSessionResult, StartSessionResult } from "@/types";
 import { connectDB } from "@/database/mongoose";
 import VoiceSession from "@/database/models/voice-session.model";
+import { getUserPlan } from "@/lib/subscription.server";
+import {
+  PLAN_LIMITS,
+  getCurrentBillingPeriodStart,
+} from "@/lib/subscription-constants";
+import { revalidatePath } from "next/cache";
 
 export const startVoiceSession = async (
   clerkId: string,
@@ -10,11 +16,6 @@ export const startVoiceSession = async (
 ): Promise<StartSessionResult> => {
   try {
     await connectDB();
-
-    // Limits/Plan to see whether a session is allowed.
-    const { getUserPlan } = await import("@/lib/subscription.server");
-    const { PLAN_LIMITS, getCurrentBillingPeriodStart } =
-      await import("@/lib/subscription-constants");
 
     const plan = await getUserPlan();
     const limits = PLAN_LIMITS[plan];
@@ -26,7 +27,6 @@ export const startVoiceSession = async (
     });
 
     if (sessionCount >= limits.maxSessionsPerMonth) {
-      const { revalidatePath } = await import("next/cache");
       revalidatePath("/");
 
       return {

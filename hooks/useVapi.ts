@@ -5,7 +5,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Vapi from "@vapi-ai/web";
 import { useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { useSubscription } from "@/hooks/useSubscription";
 
 import { ASSISTANT_ID, DEFAULT_VOICE, VOICE_SETTINGS } from "@/lib/constants";
@@ -55,7 +54,6 @@ export type CallStatus =
 export function useVapi(book: IBook) {
   const { userId } = useAuth();
   const { limits } = useSubscription();
-  const router = useRouter();
 
   const [status, setStatus] = useState<CallStatus>("idle");
   const [messages, setMessages] = useState<Messages[]>([]);
@@ -95,13 +93,19 @@ export function useVapi(book: IBook) {
 
             // Check duration limit
             if (newDuration >= maxDurationRef.current) {
+              isStoppingRef.current = true;
+              if (timerRef.current) {
+                clearInterval(timerRef.current);
+              }
+              timerRef.current = null;
               getVapi().stop();
               setLimitError(
                 `Session time limit (${Math.floor(
                   maxDurationRef.current / SECONDS_PER_MINUTE,
                 )} minutes) reached. Upgrade your plan for longer sessions.`,
               );
-              router.push("/");
+              getVapi().stop();
+              return;
             }
           }
         }, TIMER_INTERVAL_MS);
