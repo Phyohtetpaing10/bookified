@@ -98,7 +98,6 @@ export function useVapi(book: IBook) {
                 clearInterval(timerRef.current);
               }
               timerRef.current = null;
-              getVapi().stop();
               setLimitError(
                 `Session time limit (${Math.floor(
                   maxDurationRef.current / SECONDS_PER_MINUTE,
