@@ -1,9 +1,8 @@
 "use server";
 
-import VoiceSession from "@/database/models/voice-session.model";
-import { connectDB } from "@/database/mongoose";
-import { getCurrentBillingPeriodStart } from "../subscription-constants";
 import { EndSessionResult, StartSessionResult } from "@/types";
+import { connectDB } from "@/database/mongoose";
+import VoiceSession from "@/database/models/voice-session.model";
 
 export const startVoiceSession = async (
   clerkId: string,
@@ -12,23 +11,49 @@ export const startVoiceSession = async (
   try {
     await connectDB();
 
+    // Limits/Plan to see whether a session is allowed.
+    const { getUserPlan } = await import("@/lib/subscription.server");
+    const { PLAN_LIMITS, getCurrentBillingPeriodStart } =
+      await import("@/lib/subscription-constants");
+
+    const plan = await getUserPlan();
+    const limits = PLAN_LIMITS[plan];
+    const billingPeriodStart = getCurrentBillingPeriodStart();
+
+    const sessionCount = await VoiceSession.countDocuments({
+      clerkId,
+      billingPeriodStart,
+    });
+
+    if (sessionCount >= limits.maxSessionsPerMonth) {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath("/");
+
+      return {
+        success: false,
+        error: `You have reached the monthly session limit for your ${plan} plan (${limits.maxSessionsPerMonth}). Please upgrade for more sessions.`,
+        isBillingError: true,
+      };
+    }
+
     const session = await VoiceSession.create({
       clerkId,
       bookId,
       startedAt: new Date(),
+      billingPeriodStart,
       durationSeconds: 0,
-      billingPeriodStart: getCurrentBillingPeriodStart(),
     });
 
     return {
       success: true,
       sessionId: session._id.toString(),
+      maxDurationMinutes: limits.maxDurationPerSession,
     };
-  } catch (error) {
-    console.error("Error starting voice session", error);
+  } catch (e) {
+    console.error("Error starting voice session", e);
     return {
       success: false,
-      error: "Failed to start voice session. Please try again later",
+      error: "Failed to start voice session. Please try again later.",
     };
   }
 };
@@ -40,25 +65,19 @@ export const endVoiceSession = async (
   try {
     await connectDB();
 
-    const session = await VoiceSession.findByIdAndUpdate(
-      sessionId,
-      {
-        endedAt: new Date(),
-        durationSeconds,
-      },
-      { new: true },
-    );
+    const result = await VoiceSession.findByIdAndUpdate(sessionId, {
+      endedAt: new Date(),
+      durationSeconds,
+    });
 
-    if (!session) {
-      return { success: false, error: "Session not found" };
-    }
+    if (!result) return { success: false, error: "Voice session not found." };
 
     return { success: true };
-  } catch (error) {
-    console.error("Error ending voice session:", error);
+  } catch (e) {
+    console.error("Error ending voice session", e);
     return {
       success: false,
-      error: "Failed to end voice session. Please try again later",
+      error: "Failed to end voice session. Please try again later.",
     };
   }
 };

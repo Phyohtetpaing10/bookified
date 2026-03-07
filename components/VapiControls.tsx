@@ -14,10 +14,56 @@ const VapiControls = ({ book }: { book: IBook }) => {
     currentMessage,
     currentUserMessage,
     duration,
+    maxDurationSeconds,
     limitError,
     start,
     stop,
   } = useVapi(book);
+
+  const getStatusDotClass = (currentStatus: string) => {
+    switch (currentStatus) {
+      case "idle":
+        return "vapi-status-dot-ready";
+      case "starting":
+        return "vapi-status-dot-connecting";
+      case "connecting":
+        return "vapi-status-dot-connecting";
+      case "listening":
+        return "vapi-status-dot-listening";
+      case "thinking":
+        return "vapi-status-dot-thinking";
+      case "speaking":
+        return "vapi-status-dot-speaking";
+      default:
+        return "vapi-status-dot-ready";
+    }
+  };
+
+  const getStatusText = (currentStatus: string) => {
+    switch (currentStatus) {
+      case "idle":
+        return "Ready";
+      case "starting":
+        return "Starting...";
+      case "connecting":
+        return "Connecting...";
+      case "listening":
+        return "Is listening...";
+      case "thinking":
+        return "Is thinking...";
+      case "speaking":
+        return "Is speaking...";
+      default:
+        return "Ready";
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   return (
     <>
       <div className="max-w-4xl mx-auto flex flex-col gap-5">
@@ -74,10 +120,14 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
             {/* Status pill row */}
             <div className="flex flex-wrap gap-2">
-              {/* Ready indicator */}
+              {/* Ready / Status indicator */}
               <span className="vapi-status-indicator">
-                <span className="vapi-status-dot vapi-status-dot-ready" />
-                <span className="vapi-status-text">Ready</span>
+                <span
+                  className={`vapi-status-dot ${getStatusDotClass(status)}`}
+                />
+                <span className="vapi-status-text">
+                  {getStatusText(status)}
+                </span>
               </span>
 
               {/* Voice / persona pill */}
@@ -92,11 +142,19 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
               {/* Timer pill */}
               <span className="vapi-status-indicator">
-                <span className="vapi-status-text">0:00 / 15:00</span>
+                <span className="vapi-status-text">
+                  {formatTime(duration)} / {formatTime(maxDurationSeconds)}
+                </span>
               </span>
             </div>
           </div>
         </div>
+
+        {limitError && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center justify-between shadow-sm border border-red-100">
+            <span className="text-sm font-medium">{limitError}</span>
+          </div>
+        )}
 
         <div className="vapi-transcript-wrapper">
           <Transcript
